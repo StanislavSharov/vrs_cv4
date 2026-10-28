@@ -1,5 +1,6 @@
 ../Drivers/CMSIS/Include/core_cm4.h:1596:22:NVIC_SetPriorityGrouping	1
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_ll_dma.h:544:26:LL_DMA_IsEnabledChannel	1
+../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_ll_dma.h:954:26:LL_DMA_GetDataLength	1
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_ll_rcc.h:1097:22:LL_RCC_HSI_Enable	1
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_ll_rcc.h:1117:26:LL_RCC_HSI_IsReady	1
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_ll_rcc.h:1143:22:LL_RCC_HSI_SetCalibTrimming	1
@@ -13,7 +14,8 @@
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_ll_system.h:1634:22:LL_FLASH_SetLatency	1
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_ll_system.h:1647:26:LL_FLASH_GetLatency	1
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_ll_cortex.h:260:22:LL_SYSTICK_SetClkSource	2
-../Src/main.c:61:5:main	6
-../Src/main.c:116:6:SystemClock_Config	4
-../Src/main.c:150:6:proccesDmaData	10
-../Src/main.c:200:6:Error_Handler	1
+../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_ll_cortex.h:289:22:LL_SYSTICK_EnableIT	1
+../Src/main.c:62:5:main	10
+../Src/main.c:141:6:SystemClock_Config	4
+../Src/main.c:175:6:proccesDmaData	10
+../Src/main.c:225:6:Error_Handler	1

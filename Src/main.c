@@ -56,10 +56,12 @@ static uint8_t currentLength = 0U;
 static letter_count_ currentLetters = {0U, 0U};
 static uint8_t receivingMessage = 0U;
 static uint8_t replyBuffer[96];
+volatile uint32_t appMillis = 0U;
 
 
 int main(void)
 {
+  uint32_t lastReportTick;
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
@@ -69,11 +71,13 @@ int main(void)
 
   /* Configure the system clock */
   SystemClock_Config();
+  LL_SYSTICK_EnableIT();
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
   USART2_RegisterCallback(proccesDmaData);
   MX_USART2_UART_Init();
+  lastReportTick = appMillis;
 
   /* Space for your local variables, callback registration ...*/
 
@@ -106,6 +110,27 @@ int main(void)
 		  if ((replyLength > 0) && ((size_t)replyLength < sizeof(replyBuffer)))
 		  {
 			  USART2_PutBuffer(replyBuffer, (uint8_t)replyLength);
+		  }
+	  }
+
+	  /* SysTick is 1 ms; 2000 ticks correspond to the requested 0.5 Hz. */
+	  if (((uint32_t)(appMillis - lastReportTick) >= 2000U)
+			  && (LL_DMA_IsEnabledChannel(DMA1, LL_DMA_CHANNEL_7) == 0U))
+	  {
+		  uint32_t occupied = DMA_USART2_BUFFER_SIZE
+				  - LL_DMA_GetDataLength(DMA1, LL_DMA_CHANNEL_6);
+		  uint32_t loadTenths = (occupied * 1000U
+				  + DMA_USART2_BUFFER_SIZE / 2U) / DMA_USART2_BUFFER_SIZE;
+		  int reportLength = snprintf((char *)replyBuffer, sizeof(replyBuffer),
+				  "Buffer capacity: %u bytes, occupied memory: %u bytes, "
+				  "load [in %%]: %u.%u%%\r\n",
+				  (unsigned int)DMA_USART2_BUFFER_SIZE, (unsigned int)occupied,
+				  (unsigned int)(loadTenths / 10U),
+				  (unsigned int)(loadTenths % 10U));
+		  if ((reportLength > 0) && ((size_t)reportLength < sizeof(replyBuffer)))
+		  {
+			  lastReportTick = appMillis;
+			  USART2_PutBuffer(replyBuffer, (uint8_t)reportLength);
 		  }
 	  }
   }
