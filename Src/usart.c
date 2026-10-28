@@ -44,6 +44,7 @@ void USART2_RegisterCallback(void *callback)
 void MX_USART2_UART_Init(void)
 {
   LL_USART_InitTypeDef USART_InitStruct = {0};
+  LL_DMA_InitTypeDef DMA_InitStruct = {0};
 
   LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
   /* Peripheral clock enable */
@@ -70,13 +71,28 @@ void MX_USART2_UART_Init(void)
    */
   
   /* USART2_RX Init */
-
-  	  // type DMA USART Rx configuration here
+  DMA_InitStruct.PeriphOrM2MSrcAddress = (uint32_t)&USART2->RDR;
+  DMA_InitStruct.MemoryOrM2MDstAddress = (uint32_t)bufferUSART2dma;
+  DMA_InitStruct.Direction = LL_DMA_DIRECTION_PERIPH_TO_MEMORY;
+  DMA_InitStruct.Mode = LL_DMA_MODE_NORMAL;
+  DMA_InitStruct.PeriphOrM2MSrcIncMode = LL_DMA_PERIPH_NOINCREMENT;
+  DMA_InitStruct.MemoryOrM2MDstIncMode = LL_DMA_MEMORY_INCREMENT;
+  DMA_InitStruct.PeriphOrM2MSrcDataSize = LL_DMA_PDATAALIGN_BYTE;
+  DMA_InitStruct.MemoryOrM2MDstDataSize = LL_DMA_MDATAALIGN_BYTE;
+  DMA_InitStruct.NbData = DMA_USART2_BUFFER_SIZE;
+  DMA_InitStruct.Priority = LL_DMA_PRIORITY_MEDIUM;
+  LL_DMA_Init(DMA1, LL_DMA_CHANNEL_6, &DMA_InitStruct);
+  LL_DMA_EnableIT_HT(DMA1, LL_DMA_CHANNEL_6);
+  LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_6);
 
 
   /* USART2_TX Init */
-
-	  // type DMA USART Tx configuration here
+  DMA_InitStruct.PeriphOrM2MSrcAddress = (uint32_t)&USART2->TDR;
+  DMA_InitStruct.MemoryOrM2MDstAddress = 0U;
+  DMA_InitStruct.Direction = LL_DMA_DIRECTION_MEMORY_TO_PERIPH;
+  DMA_InitStruct.Mode = LL_DMA_MODE_NORMAL;
+  DMA_InitStruct.NbData = 0U;
+  LL_DMA_Init(DMA1, LL_DMA_CHANNEL_7, &DMA_InitStruct);
 
 
   /* USART2 interrupt Init */
@@ -95,8 +111,11 @@ void MX_USART2_UART_Init(void)
   LL_USART_DisableIT_CTS(USART2);
 
   /* Enable USART2 peripheral and interrupts*/
-
-  	  //type your code here:
+  LL_USART_Enable(USART2);
+  LL_USART_EnableIT_IDLE(USART2);
+  LL_USART_EnableDMAReq_RX(USART2);
+  LL_USART_EnableDMAReq_TX(USART2);
+  LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_6);
 }
 
 
