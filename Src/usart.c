@@ -36,8 +36,8 @@ void USART2_RegisterCallback(void *callback)
 }
 
 /* Space for global variables, if you need them */
-
-	// type global variables here
+/* Number of bytes already forwarded from the current normal-mode DMA transfer. */
+static uint16_t rxProcessed = 0U;
 
 
 /* USART2 init function */
@@ -140,7 +140,40 @@ void USART2_PutBuffer(uint8_t *buffer, uint8_t length)
  */
 void USART2_CheckDmaReception(void)
 {
-	//type your implementation here
+	uint16_t received = DMA_USART2_BUFFER_SIZE
+			- (uint16_t)LL_DMA_GetDataLength(DMA1, LL_DMA_CHANNEL_6);
+
+	/* Each byte is forwarded exactly once, even if HT and IDLE both fire. */
+	while (rxProcessed < received)
+	{
+		uint8_t sign = bufferUSART2dma[rxProcessed++];
+		if (USART2_ProcessData != 0)
+		{
+			USART2_ProcessData(sign);
+		}
+	}
+
+	/* Leave enough room for the next burst of at most 20 characters. */
+	if (received >= (DMA_USART2_BUFFER_SIZE - 20U))
+	{
+		LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_6);
+		received = DMA_USART2_BUFFER_SIZE
+				- (uint16_t)LL_DMA_GetDataLength(DMA1, LL_DMA_CHANNEL_6);
+		while (rxProcessed < received)
+		{
+			uint8_t sign = bufferUSART2dma[rxProcessed++];
+			if (USART2_ProcessData != 0)
+			{
+				USART2_ProcessData(sign);
+			}
+		}
+
+		rxProcessed = 0U;
+		LL_DMA_ClearFlag_HT6(DMA1);
+		LL_DMA_ClearFlag_TC6(DMA1);
+		LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_6, DMA_USART2_BUFFER_SIZE);
+		LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_6);
+	}
 }
 
 

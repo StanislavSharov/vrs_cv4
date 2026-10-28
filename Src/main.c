@@ -23,6 +23,8 @@
 #include "dma.h"
 #include "usart.h"
 #include "gpio.h"
+#include <stdio.h>
+#include <string.h>
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -37,8 +39,23 @@ void proccesDmaData(uint8_t sign);
 
 
 /* Space for your global variables. */
+#define MAX_MESSAGE_CHARS 35U
+#define MESSAGE_QUEUE_SIZE 16U
 
-	// type your global variables here:
+typedef struct
+{
+	char text[MAX_MESSAGE_CHARS + 1U];
+	letter_count_ letters;
+} received_message_t;
+
+static received_message_t messageQueue[MESSAGE_QUEUE_SIZE];
+static volatile uint8_t messageHead = 0U;
+static volatile uint8_t messageTail = 0U;
+static char currentMessage[MAX_MESSAGE_CHARS + 1U];
+static uint8_t currentLength = 0U;
+static letter_count_ currentLetters = {0U, 0U};
+static uint8_t receivingMessage = 0U;
+static uint8_t replyBuffer[96];
 
 
 int main(void)
@@ -55,11 +72,10 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
+  USART2_RegisterCallback(proccesDmaData);
   MX_USART2_UART_Init();
 
   /* Space for your local variables, callback registration ...*/
-
-  	  //type your code here:
 
   while (1)
   {
@@ -74,8 +90,24 @@ int main(void)
 	   * Message format - "Valid string: %s, lower-case: %d, upper-case: %d"
 	   * Example message (what I wish to see in terminal) - Valid string: Platn15uborZnakov, lower-case: 13, upper-case: 2
 	   */
+	  if ((messageTail != messageHead)
+			  && (LL_DMA_IsEnabledChannel(DMA1, LL_DMA_CHANNEL_7) == 0U))
+	  {
+		  received_message_t message;
+		  int replyLength;
 
-  	  	  	  //type your code here:
+		  /* The ISR publishes a slot only after filling the whole message. */
+		  message = messageQueue[messageTail];
+		  messageTail = (uint8_t)((messageTail + 1U) % MESSAGE_QUEUE_SIZE);
+		  replyLength = snprintf((char *)replyBuffer, sizeof(replyBuffer),
+				  "Valid string: %s, lower-case: %u, upper-case: %u\r\n",
+				  message.text, (unsigned int)message.letters.small_letter,
+				  (unsigned int)message.letters.capital_letter);
+		  if ((replyLength > 0) && ((size_t)replyLength < sizeof(replyBuffer)))
+		  {
+			  USART2_PutBuffer(replyBuffer, (uint8_t)replyLength);
+		  }
+	  }
   }
   /* USER CODE END 3 */
 }
@@ -117,9 +149,51 @@ void SystemClock_Config(void)
  */
 void proccesDmaData(uint8_t sign)
 {
-	/* Process received data */
+	if (receivingMessage == 0U)
+	{
+		if (sign == '#')
+		{
+			receivingMessage = 1U;
+			currentLength = 0U;
+			currentLetters.small_letter = 0U;
+			currentLetters.capital_letter = 0U;
+		}
+		return;
+	}
 
-		// type your algorithm here:
+	/* The terminating '$' must be among the first 35 chars after '#'. */
+	if (sign == '$')
+	{
+		uint8_t nextHead = (uint8_t)((messageHead + 1U) % MESSAGE_QUEUE_SIZE);
+		if (nextHead != messageTail)
+		{
+			received_message_t *slot = &messageQueue[messageHead];
+			memcpy(slot->text, currentMessage, currentLength);
+			slot->text[currentLength] = '\0';
+			slot->letters = currentLetters;
+			messageHead = nextHead;
+		}
+		receivingMessage = 0U;
+		return;
+	}
+
+	++currentLength;
+	if (currentLength >= MAX_MESSAGE_CHARS)
+	{
+		/* No '$' in the 35 characters after '#': discard the string. */
+		receivingMessage = 0U;
+		return;
+	}
+
+	currentMessage[currentLength - 1U] = (char)sign;
+	if ((sign >= 'a') && (sign <= 'z'))
+	{
+		++currentLetters.small_letter;
+	}
+	else if ((sign >= 'A') && (sign <= 'Z'))
+	{
+		++currentLetters.capital_letter;
+	}
 }
 
 
